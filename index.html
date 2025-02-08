@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable Pro</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: 'hsl(222.2 47.4% 11.2%)',
+                        secondary: 'hsl(210, 60%, 50%)'
+                    }
+                }
+            }
+        };
+    </script>
+    <style>
+        .backdrop-blur { backdrop-filter: blur(8px); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-primary/5 to-primary/10 min-h-screen">
+    <div class="container mx-auto p-4 max-w-7xl">
+        <div class="bg-white/80 backdrop-blur rounded-lg shadow-sm p-6 mb-6">
+            <div class="flex items-center gap-3 mb-4">
+                <i class="fas fa-calendar text-primary text-2xl"></i>
+                <h1 class="text-3xl font-bold text-primary">TimeTable Pro</h1>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2 mb-4">
+                <input type="text" id="title" placeholder="Timetable Title*" class="w-full px-4 py-2 rounded-md border">
+                <input type="password" id="pin" placeholder="PIN (for sharing)*" class="w-full px-4 py-2 rounded-md border">
+            </div>
+            <textarea id="description" placeholder="Description (optional)" class="w-full px-4 py-2 rounded-md border"></textarea>
+        </div>
+
+        <div class="grid md:grid-cols-[2fr_1fr] gap-6">
+            <div class="space-y-6">
+                <div class="bg-white/80 backdrop-blur rounded-lg shadow-sm">
+                    <div class="p-6 border-b">
+                        <div class="flex items-center justify-between">
+                            <h2 id="selected-day" class="text-xl font-semibold">Schedule for Monday</h2>
+                            <button onclick="openEventModal()" class="px-4 py-2 bg-secondary text-white rounded-md flex items-center gap-2">
+                                <i class="fas fa-plus"></i>
+                                Add Event
+                            </button>
+                        </div>
+                    </div>
+                    <div id="events-container" class="p-6 space-y-4"></div>
+                </div>
+            </div>
+            <div class="space-y-6">
+                <div class="bg-white/80 backdrop-blur rounded-lg shadow-sm p-4">
+                    <div id="days-container" class="flex flex-wrap gap-2"></div>
+                </div>
+                <div class="bg-white/80 backdrop-blur rounded-lg shadow-sm p-4">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-clock text-primary"></i>
+                        <h3 id="current-time" class="font-semibold"></h3>
+                    </div>
+                    <div id="timeline-container"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Modal -->
+    <div id="event-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+        <div class="bg-white p-6 rounded-lg shadow-lg w-96">
+            <h3 class="text-lg font-semibold mb-4">Add Event</h3>
+            <input type="text" id="event-title" placeholder="Event Title" class="w-full px-4 py-2 rounded-md border mb-2">
+            <input type="time" id="event-start" class="w-full px-4 py-2 rounded-md border mb-2">
+            <input type="time" id="event-end" class="w-full px-4 py-2 rounded-md border mb-2">
+            <div class="flex justify-end gap-2">
+                <button onclick="closeEventModal()" class="px-4 py-2 bg-gray-300 rounded-md">Cancel</button>
+                <button onclick="addEvent()" class="px-4 py-2 bg-secondary text-white rounded-md">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        if (!window.state) {
+            window.state = {
+                days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+                schedules: {},
+                selectedDay: 'Monday',
+                selectedEvent: null,
+                userTimetables: {}
+            };
+        }
+
+        function initializeUI() {
+            updateDaysUI();
+            updateEventsUI();
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        function updateDaysUI() {
+            const container = document.getElementById('days-container');
+            container.innerHTML = state.days.map(day => `
+                <button onclick="selectDay('${day}')" 
+                    class="px-4 py-2 rounded-md ${day === state.selectedDay ? 'bg-secondary text-white' : 'border'}">
+                    ${day}
+                </button>
+            `).join('');
+            document.getElementById('selected-day').textContent = `Schedule for ${state.selectedDay}`;
+        }
+
+        function selectDay(day) {
+            state.selectedDay = day;
+            updateDaysUI();
+            updateEventsUI();
+        }
+
+        function openEventModal() {
+            document.getElementById('event-modal').classList.remove('hidden');
+        }
+
+        function closeEventModal() {
+            document.getElementById('event-modal').classList.add('hidden');
+        }
+
+        function addEvent() {
+            const title = document.getElementById('event-title').value;
+            const startTime = document.getElementById('event-start').value;
+            const endTime = document.getElementById('event-end').value;
+            
+            if (!title || !startTime || !endTime) {
+                alert('Please fill all fields');
+                return;
+            }
+            
+            if (!state.schedules[state.selectedDay]) {
+                state.schedules[state.selectedDay] = { events: [] };
+            }
+
+            state.schedules[state.selectedDay].events.push({ title, startTime, endTime });
+            closeEventModal();
+            updateEventsUI();
+        }
+
+        function updateEventsUI() {
+            const container = document.getElementById('events-container');
+            const events = state.schedules[state.selectedDay]?.events || [];
+            container.innerHTML = events.length ? events.map(event => `
+                <div class="p-4 rounded-lg border bg-white">
+                    <h4 class="font-medium">${event.title}</h4>
+                    <p class="text-sm text-gray-600">${event.startTime} - ${event.endTime}</p>
+                </div>
+            `).join('') : '<p class="text-center text-gray-600">No events scheduled</p>';
+        }
+
+        function updateClock() {
+            document.getElementById('current-time').textContent = new Date().toLocaleTimeString();
+        }
+
+        initializeUI();
+    </script>
+</body>
+</html>
