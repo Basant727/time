@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timetable Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#0D0D0D', // Premium dark black color
+                    },
+                    boxShadow: {
+                        glow: '0 0 10px #0D0D0D', // Glow effect for buttons
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .backdrop-blur { backdrop-filter: blur(8px); }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-primary/10 to-primary/20 min-h-screen text-gray-200"> <!-- Changed text color to gray-200 -->
+    <div class="container mx-auto p-4 max-w-7xl">
+        <!-- Header -->
+        <div class="bg-primary/90 backdrop-blur rounded-lg shadow-sm p-6 mb-6"> <!-- Changed bg to primary/90 -->
+            <div class="flex items-center gap-3 mb-4">
+                <i class="fas fa-calendar text-gray-200 text-2xl"></i> <!-- Changed icon color to gray-200 -->
+                <h1 class="text-3xl font-bold text-gray-200">Timetable Pro</h1> <!-- Changed text color to gray-200 -->
+            </div>
+            <div class="grid gap-4 md:grid-cols-2 mb-4">
+                <input type="text" id="title" placeholder="Timetable Title*" class="w-full px-4 py-2 rounded-md border bg-primary/40 text-gray-200">
+                <input type="password" id="pin" placeholder="PIN (for sharing)*" class="w-full px-4 py-2 rounded-md border bg-primary/40 text-gray-200">
+            </div>
+            <textarea id="description" placeholder="Description (optional)" class="w-full px-4 py-2 rounded-md border bg-primary/40 text-gray-200"></textarea>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid md:grid-cols-[2fr_1fr] gap-6">
+            <!-- Schedule Section -->
+            <div class="space-y-6">
+                <div class="bg-primary/90 backdrop-blur rounded-lg shadow-sm"> <!-- Changed bg to primary/90 -->
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex items-center justify-between">
+                            <h2 id="selected-day" class="text-xl font-semibold text-gray-200">Schedule for Monday</h2> <!-- Changed text color to gray-200 -->
+                            <button onclick="addEvent()" class="px-4 py-2 bg-primary text-gray-200 rounded-md flex items-center gap-2 shadow-glow"> <!-- Added shadow-glow -->
+                                <i class="fas fa-plus"></i>
+                                Add Event
+                            </button>
+                        </div>
+                    </div>
+                    <div id="events-container" class="p-6 space-y-4">
+                        <!-- Events will be added here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="space-y-6">
+                <!-- Days Selection -->
+                <div class="bg-primary/90 backdrop-blur rounded-lg shadow-sm p-4"> <!-- Changed bg to primary/90 -->
+                    <div id="days-container" class="flex flex-wrap gap-2">
+                        <!-- Days will be added here -->
+                    </div>
+                </div>
+
+                <!-- Timeline -->
+                <div class="bg-primary/90 backdrop-blur rounded-lg shadow-sm p-4"> <!-- Changed bg to primary/90 -->
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-clock text-gray-200"></i> <!-- Changed icon color to gray-200 -->
+                        <h3 id="current-time" class="font-semibold text-gray-200"></h3> <!-- Changed text color to gray-200 -->
+                    </div>
+                    <div id="timeline-container">
+                        <!-- Current and upcoming events will be shown here -->
+                    </div>
+                </div>
+
+                <!-- Download Button -->
+                <button onclick="downloadTimetable()" class="w-full px-4 py-2 bg-primary text-gray-200 rounded-md flex items-center justify-center gap-2 shadow-glow"> <!-- Added shadow-glow -->
+                    <i class="fas fa-download"></i>
+                    Download Timetable
+                </button>
+
+                <!-- Share Link -->
+                <div class="bg-primary/90 backdrop-blur rounded-lg shadow-sm p-4"> <!-- Changed bg to primary/90 -->
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="fas fa-share text-gray-200"></i> <!-- Changed icon color to gray-200 -->
+                        <h3 class="font-semibold text-gray-200">Share Timetable</h3> <!-- Changed text color to gray-200 -->
+                    </div>
+                    <div class="flex gap-2">
+                        <input type="text" id="share-link" class="w-full px-4 py-2 rounded-md border bg-primary/40 text-gray-200" readonly>
+                        <button onclick="generateShareLink()" class="px-4 py-2 bg-primary text-gray-200 rounded-md shadow-glow"> <!-- Added shadow-glow -->
+                            Generate
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Event Dialog -->
+    <div id="event-dialog" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-primary rounded-lg p-6 w-full max-w-md mx-4"> <!-- Changed bg to primary -->
+            <h3 class="text-lg font-semibold mb-4 text-gray-200">Edit Event</h3> <!-- Changed text color to gray-200 -->
+            <div class="space-y-4">
+                <input type="text" id="event-title" placeholder="Event Title" class="w-full px-4 py-2 rounded-md border bg-primary/40 text-gray-200">
+                <textarea id="event-description" placeholder="Event Description (optional)" class="w-full px-4 py-2 rounded-md border bg-primary/40 text-gray-200"></textarea>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm font-medium text-gray-200">Start Time</label> <!-- Changed text color to gray-200 -->
+                        <select id="event-start" class="w-full rounded-md border p-2 mt-1 bg-primary/40 text-gray-200"></select>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-gray-200">End Time</label> <!-- Changed text color to gray-200 -->
+                        <select id="event-end" class="w-full rounded-md border p-2 mt-1 bg-primary/40 text-gray-200"></select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2">
+                    <button onclick="closeEventDialog()" class="px-4 py-2 border rounded-md text-gray-200">Cancel</button> <!-- Changed text color to gray-200 -->
+                    <button onclick="saveEvent()" class="px-4 py-2 bg-primary text-gray-200 rounded-md shadow-glow"> <!-- Added shadow-glow -->
+                        Save
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PIN Dialog -->
+    <div id="pin-dialog" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-primary rounded-lg p-6 w-full max-w-md mx-4"> <!-- Changed bg to primary -->
+            <h3 class="text-lg font-semibold mb-4 text-gray-200">Enter PIN</h3> <!-- Changed text color to gray-200 -->
+            <div class="space-y-4">
+                <input type="password" id="input-pin" placeholder="Enter PIN" class="w-full px-4 py-2 rounded-md border bg-primary/40 text-gray-200">
+                <div class="flex justify-end gap-2">
+                    <button onclick="closePinDialog()" class="px-4 py-2 border rounded-md text-gray-200">Cancel</button> <!-- Changed text color to gray-200 -->
+                    <button onclick="verifyPin()" class="px-4 py-2 bg-primary text-gray-200 rounded-md shadow-glow"> <!-- Added shadow-glow -->
+                        Submit
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const state = {
+            days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+            slots: ['9:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM', '3:00 PM', '4:00 PM', '5:00 PM'],
+            schedules: {},
+            selectedDay: 'Monday',
+            selectedEvent: null
+        };
+
+        function initializeUI() {
+            updateDaysUI();
+            updateTimeslots();
+            updateEventsUI();
+            updateClock();
+            setInterval(updateClock, 1000);
+
+            // Check for share link
+            const urlParams = new URLSearchParams(window.location.search);
+            const timetableId = urlParams.get('id');
+            if (timetableId) {
+                openPinDialog(timetableId);
+            }
+        }
+
+        function updateDaysUI() {
+            const container = document.getElementById('days-container');
+            container.innerHTML = state.days.map(day => `
+                <button onclick="selectDay('${day}')" 
+                    class="px-4 py-2 rounded-md ${day === state.selectedDay ? 'bg-primary text-gray-200' : 'border bg-primary/40 text-gray-200'}">
+                    ${day}
+                </button>
+            `).join('');
+            document.getElementById('selected-day').textContent = `Schedule for ${state.selectedDay}`;
+        }
+
+        function updateEventsUI() {
+            const container = document.getElementById('events-container');
+            const events = state.schedules[state.selectedDay]?.events || [];
+
+            container.innerHTML = events.length ? events.map(event => `
+                <div class="p-4 rounded-lg border bg-primary/60 text-gray-200"> <!-- Changed bg to primary/60 -->
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="font-medium">${event.title || 'Untitled Event'}</h4>
+                            <p class="text-sm text-gray-400">
+                                ${event.startTime} - ${event.endTime}
+                            </p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="editEvent('${event.id}')" class="px-3 py-1 text-sm border rounded-md text-gray-200">Edit</button> <!-- Changed text color to gray-200 -->
+                            <button onclick="removeEvent('${event.id}')" class="px-3 py-1 text-sm border rounded-md text-gray-200">Remove</button> <!-- Changed text color to gray-200 -->
+                        </div>
+                    </div>
+                    ${event.description ? `
+                        <p class="text-sm text-gray-400 mt-2">${event.description}</p>
+                    ` : ''}
+                </div>
+            `).join('') : '<p class="text-center text-gray-400">No events scheduled</p>'; <!-- Changed text color to gray-400 -->
+
+            updateTimeline();
+        }
+
+        function updateTimeslots() {
+            const startSelect = document.getElementById('event-start');
+            const endSelect = document.getElementById('event-end');
+
+            startSelect.innerHTML = state.slots.map(slot => 
+                `<option value="${slot}">${slot}</option>`
+            ).join('');
+
+            endSelect.innerHTML = state.slots.map(slot => 
+                `<option value="${slot}">${slot}</option>`
+            ).join('');
+        }
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = 
+                now.toLocaleTimeString() + ' - ' + now.toLocaleDateString();
+            updateTimeline();
+        }
+
+        function updateTimeline() {
+            const container = document.getElementById('timeline-container');
+            const events = state.schedules[state.selectedDay]?.events || [];
+            container.innerHTML = events.map(event => `
+                <div class="mb-4 p-4 rounded-lg border bg-primary/60 text-gray-200"> <!-- Changed bg to primary/60 -->
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="font-medium">${event.title}</h4>
+                    </div>
+                    <p class="text-sm text-gray-400">${event.startTime} - ${event.endTime}</p>
+                </div>
+            `).join('');
+        }
+
+        function selectDay(day) {
+            state.selectedDay = day;
+            updateDaysUI();
+            updateEventsUI();
+        }
+
+        function addEvent() {
+            state.selectedEvent = {
+                id: Date.now().toString(),
+                title: '',
+                startTime: state.slots[0],
+                endTime: state.slots[1],
+                description: ''
+            };
+            openEventDialog();
+        }
+
+        function editEvent(eventId) {
+            const events = state.schedules[state.selectedDay]?.events || [];
+            state.selectedEvent = events.find(e => e.id === eventId);
+            openEventDialog();
+        }
+
+        function removeEvent(eventId) {
+            if (!state.schedules[state.selectedDay]) return;
+            state.schedules[state.selectedDay].events = 
+                state.schedules[state.selectedDay].events.filter(e => e.id !== eventId);
+            updateEventsUI();
+        }
+
+        function openEventDialog() {
+            const dialog = document.getElementById('event-dialog');
+            const titleInput = document.getElementById('event-title');
+            const descInput = document.getElementById('event-description');
+            const startSelect = document.getElementById('event-start');
+            const endSelect = document.getElementById('event-end');
+
+            titleInput.value = state.selectedEvent?.title || '';
+            descInput.value = state.selectedEvent?.description || '';
+            startSelect.value = state.selectedEvent?.startTime || state.slots[0];
+            endSelect.value = state.selectedEvent?.endTime || state.slots[1];
+
+            dialog.classList.remove('hidden');
+        }
+
+        function closeEventDialog() {
+            document.getElementById('event-dialog').classList.add('hidden');
+            state.selectedEvent = null;
+        }
+
+        function saveEvent() {
+            const event = {
+                id: state.selectedEvent?.id || Date.now().toString(),
+                title: document.getElementById('event-title').value,
+                description: document.getElementById('event-description').value,
+                startTime: document.getElementById('event-start').value,
+                endTime: document.getElementById('event-end').value
+            };
+
+            if (!state.schedules[state.selectedDay]) {
+                state.schedules[state.selectedDay] = { events: [] };
+            }
+
+            const eventIndex = state.schedules[state.selectedDay].events
+                .findIndex(e => e.id === event.id);
+
+            if (eventIndex > -1) {
+                state.schedules[state.selectedDay].events[eventIndex] = event;
+            } else {
+                state.schedules[state.selectedDay].events.push(event);
+            }
+
+            closeEventDialog();
+            updateEventsUI();
+        }
+
+        function downloadTimetable() {
+            const title = document.getElementById('title').value || 'My Timetable';
+            const timetableData = {
+                title,
+                description: document.getElementById('description').value,
+                pin: document.getElementById('pin').value,
+                schedules: state.schedules
+            };
+
+            const blob = new Blob([JSON.stringify(timetableData, null, 2)], { 
+                type: 'application/json' 
+            });
+            saveAs(blob, `${title.toLowerCase().replace(/\s+/g, '-')}.json`);
+        }
+
+        function generateShareLink() {
+            const title = document.getElementById('title').value || 'My Timetable';
+            const pin = document.getElementById('pin').value;
+
+            if (!pin) {
+                alert("Please set a PIN for sharing.");
+                return;
+            }
+
+            const timetableId = Date.now().toString();
+            const timetableData = {
+                title,
+                description: document.getElementById('description').value,
+                pin,
+                schedules: state.schedules
+            };
+
+            // Store the timetable data in local storage
+            localStorage.setItem(`timetable_${timetableId}`, JSON.stringify(timetableData));
+
+            const shareLink = `${window.location.origin}${window.location.pathname}?id=${timetableId}`;
+            document.getElementById('share-link').value = shareLink;
+        }
+
+        function openPinDialog(timetableId) {
+            const dialog = document.getElementById('pin-dialog');
+            dialog.classList.remove('hidden');
+            document.getElementById('input-pin').dataset.timetableId = timetableId;
+        }
+
+        function closePinDialog() {
+            document.getElementById('pin-dialog').classList.add('hidden');
+        }
+
+        function verifyPin() {
+            const inputPin = document.getElementById('input-pin').value;
+            const timetableId = document.getElementById('input-pin').dataset.timetableId;
+            const storedTimetable = localStorage.getItem(`timetable_${timetableId}`);
+
+            if (storedTimetable) {
+                const timetableData = JSON.parse(storedTimetable);
+                if (timetableData.pin === inputPin) {
+                    closePinDialog();
+                    loadSharedTimetable(timetableData);
+                } else {
+                    alert("Invalid PIN. Please try again.");
+                }
+            } else {
+                alert("Invalid link. Timetable not found.");
+            }
+        }
+
+        function loadSharedTimetable(timetableData) {
+            document.getElementById('title').value = timetableData.title;
+            document.getElementById('description').value = timetableData.description;
+            document.getElementById('pin').value = timetableData.pin;
+            state.schedules = timetableData.schedules;
+            updateEventsUI();
+        }
+
+        initializeUI();
+    </script>
+</body>
+</html>
